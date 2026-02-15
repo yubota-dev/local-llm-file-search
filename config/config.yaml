@@ -1,0 +1,59 @@
+# Local LLM Media Search Configuration
+
+# Scan settings
+scan:
+  # Target drive/folder to scan (change this to your target location)
+  root_path: "D:\\"  # Example: change to your target drive
+  
+  # File extensions to index
+  extensions:
+    video: [".mp4", ".mkv", ".mov", ".avi", ".wmv", ".flv", ".webm", ".m4v"]
+    audio: [".mp3", ".flac", ".wav", ".m4a", ".aac", ".ogg", ".opus", ".wma"]
+    image: [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tiff", ".heic"]
+    archive: [".zip", ".7z", ".rar", ".tar", ".gz", ".tgz"]
+    text_sidecar: [".srt", ".vtt", ".ass", ".txt", ".md", ".nfo", ".json", ".xml"]
+
+# Metadata extraction settings
+metadata:
+  # Use ffprobe if available for video/audio
+  use_ffprobe: true
+  
+  # Extract EXIF from images
+  extract_image_exif: true
+  
+  # Text extraction limits
+  text_max_size_bytes: 1048576  # 1MB
+  text_encoding_errors: "ignore"  # ignore, replace, or strict
+  
+  # Archive scanning limits
+  archive_max_entries: 50000
+  archive_max_size_gb: 50
+
+# Chunking settings
+chunking:
+  chunk_size: 512
+  chunk_overlap: 50
+
+# Vector database settings
+vectordb:
+  type: "chromadb"  # or "faiss"
+  persist_directory: "./data/index"
+  embedding_model: "nomic-embed-text"
+
+# LLM settings (Ollama)
+ollama:
+  base_url: "http://localhost:11434"
+  model: "mistral"  # or "llama2", "neural-chat", etc.
+  temperature: 0.1  # Lower = less creative, more factual
+  top_p: 0.9
+
+# Query settings
+query:
+  top_k: 5
+  min_similarity_score: 0.3
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/media_search.log"
