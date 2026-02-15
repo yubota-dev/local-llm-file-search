@@ -24,7 +24,6 @@ from pathlib import Path
 
 try:
     import chromadb
-    from chromadb.config import Settings
     CHROMADB_AVAILABLE = True
 except ImportError:
     CHROMADB_AVAILABLE = False
@@ -60,19 +59,47 @@ class MediaIndexer:
         os.makedirs(self.persist_dir, exist_ok=True)
         
         self.db = None
+        self.collection = None
         if CHROMADB_AVAILABLE:
             self._init_chromadb()
     
     def _init_chromadb(self) -> None:
-        """Chroma DB を初期化"""
-        settings = Settings(
-            chroma_db_impl="duckdb+parquet",
-            persist_directory=self.persist_dir,
-            anonymized_telemetry=False,
-        )
+        """Chroma DB を初期化（新 API 対応）"""
+        try:
+            # Chroma 0.4.0+ の新 PersistentClient API を使用
+            self.db = chromadb.PersistentClient(path=self.persist_dir)
+            # コレクションを作成/取得（新 API では collection 単位で操作）
+            self.collection = self.db.get_or_create_collection(
+                name="media_metadata",
+                metadata={"hnsw:space": "cosine"}
+            )
+            logger.info(f"Chroma DB initialized at {self.persist_dir}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Chroma DB: {e}")
+            self.db = None
+            self.collection = None
+    
+    def load_metadata_from_file(self, filepath: str = "data/raw/metadata.json") -> List[Dict]:
+        """
+        JSONファイルからメタデータを読み込む
         
-        self.db = chromadb.Client(settings)
-        logger.info(f"Chroma DB initialized at {self.persist_dir}")
+        Args:
+            filepath: メタデータJSONファイルパス
+        
+        Returns:
+            メタデータリスト
+        """
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                metadata_list = json.load(f)
+            logger.info(f"Loaded {len(metadata_list)} items from {filepath}")
+            return metadata_list
+        except FileNotFoundError:
+            logger.error(f"Metadata file not found: {filepath}")
+            return []
+        except Exception as e:
+            logger.error(f"Error loading metadata: {e}")
+            return []
     
     def index_metadata(self, metadata_list: List[Dict]) -> None:
         """
@@ -93,12 +120,13 @@ class MediaIndexer:
                 # メタデータを整理
                 metadata_dict = self._extract_metadata(meta)
                 
-                # Chroma に追加
-                self.db.add(
-                    documents=[document],
-                    metadatas=[metadata_dict],
-                    ids=[f"media_{i}"]
-                )
+                # Chroma に追加（collection 単位）
+                if self.collection:
+                    self.collection.add(
+                        documents=[document],
+                        metadatas=[metadata_dict],
+                        ids=[f"media_{i}"]
+                    )
                 
                 if (i + 1) % 100 == 0:
                     logger.info(f"Indexed {i + 1} items")
@@ -106,8 +134,7 @@ class MediaIndexer:
             except Exception as e:
                 logger.warning(f"Error indexing {meta.get('path')}: {e}")
         
-        # 永続化
-        self.db.persist()
+        # 新 API では自動的に保存される（persist 不要）
         logger.info(f"Indexed {len(metadata_list)} items successfully")
     
     def _create_document(self, meta: Dict) -> str:
@@ -272,12 +299,12 @@ class MediaIndexer:
         Returns:
             検索結果リスト
         """
-        if not self.db:
-            logger.error("Database not initialized")
+        if not self.collection:
+            logger.error("Collection not initialized")
             return []
         
         try:
-            results = self.db.query(
+            results = self.collection.query(
                 query_texts=[query],
                 n_results=top_k
             )

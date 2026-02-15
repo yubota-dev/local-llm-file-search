@@ -161,11 +161,18 @@ Pillow で画像情報、EXIF で：
 - チャンキング処理
 - ベクトルDB へ保存
 
-### `query.py`
-検索実行：
-- LLM に質問を送信
-- ベクトル検索で根拠を取得
-- Path と source_type を必ず含める
+### `query.py` - 読み取り専用検索モジュール
+
+**Architecture: Phase 1 Read-Only Design**
+- ✅ Chroma コレクションから読み取り検索のみ
+- ❌ データベースへの書き込みはなし（indexer.py のみが書き込み）
+- 検索ごとに DB が成長しない設計
+
+実行方式：
+- `MediaSearchQuery` クラスで Chroma コレクションに直接接続
+- `indexer.py` で事前に索引を作成しておく必要あり
+- 検索は `collection.query()` のみ（読み取り）
+- 見つからない場合は明確に「Index not found」を報告
 
 ---
 
