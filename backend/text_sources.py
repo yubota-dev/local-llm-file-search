@@ -7,6 +7,12 @@ text_sources.py - テキストソース抽出モジュール
 - メタ：.nfo, .json, .xml
 
 文字コード失敗時は errors="ignore" で続行
+
+【Phase 1 design constraints】
+- This module extracts text from sidecar files only (subtitles, notes, metadata files).
+- Text extraction is for SEARCH INDEXING purposes only.
+- Text content understanding and semantic analysis are NOT performed.
+- Language interpretation and meaning extraction are deferred to Phase 2+.
 """
 
 import os

@@ -3,6 +3,12 @@ chunker.py - テキストチャンキング処理モジュール
 
 大きなテキストを指定サイズで学習用チャンクに分割
 オーバーラップを設定して検索性を向上
+
+【Phase 1 design constraints】
+This module chunks sidecar text (subtitles, notes, metadata) for indexing.
+Chunking is performed for search purposes only.
+Semantic understanding and content interpretation are NOT performed.
+Chunked text is used for vector embedding only, not for content analysis.
 """
 
 import json

@@ -6,6 +6,12 @@ mutagen または ffprobe を使用して音声ファイルのタグ情報を抽
 - 基本情報：duration, bitrate, sample_rate, channels
 
 mutagen が無い場合は ffprobe でフォールバック
+
+【Phase 1 design constraints】
+- This module extracts ONLY metadata tags and technical properties.
+- Speech recognition, audio content analysis, and mood inference are NOT performed.
+- Tags (artist, title, album) are indexed as text metadata only, not for understanding.
+- Audio content interpretation is intentionally deferred to Phase 2+.
 """
 
 import json

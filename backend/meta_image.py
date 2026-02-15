@@ -6,6 +6,12 @@ Pillow で画像情報、EXIF で以下を取得（可能な範囲）：
 - 撮影日時、機種、向き、GPS（取得可能な場合）
 
 Phase 1では基本情報が中心。物体認識はPhase 2以降
+
+【Phase 1 design constraints】
+- This module extracts ONLY image metadata (dimensions, format, basic EXIF).
+- Image content analysis (object detection, scene understanding) is NOT performed.
+- EXIF data is indexed for metadata search only, not for image interpretation.
+- Visual feature extraction is intentionally deferred to Phase 2+.
 """
 
 import json

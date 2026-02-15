@@ -12,6 +12,13 @@ Phase 1: 展開しない。中身をリストするのみ
 - 最大エントリ数制限
 - 合計サイズ推定
 - パストラバーサル検出
+
+【Phase 1 design constraints】
+- This module indexes archive contents as FILE LISTS ONLY.
+- Archive file contents are NEVER extracted or decompressed in Phase 1.
+- Entry count and size limits are intentional Phase 1 safeguards.
+- File extraction and content analysis are deferred to Phase 2+.
+- Archive content inspection (malware scan, etc.) is out of scope.
 """
 
 import os
@@ -56,6 +63,10 @@ class ArchiveListExtractor:
         """
         アーカイブの中身を一覧化
         
+        【Phase 1 note】
+        Archive contents are indexed as FILE LISTS ONLY.
+        File extraction (decompression) is NEVER performed.
+        
         Args:
             filepath: アーカイブファイルパス
         
@@ -96,6 +107,10 @@ class ArchiveListExtractor:
     def _extract_zip(self, filepath: str, meta: Dict) -> Dict:
         """
         ZIP ファイルを処理
+        
+        【Phase 1 note】
+        Only file list metadata is extracted.
+        Actual file extraction is NOT performed.
         
         Args:
             filepath: ZIP ファイルパス
@@ -148,6 +163,10 @@ class ArchiveListExtractor:
     def _extract_tar(self, filepath: str, meta: Dict) -> Dict:
         """
         TAR ファイルを処理
+        
+        【Phase 1 note】
+        Only file list metadata is extracted.
+        Actual file extraction is NOT performed.
         
         Args:
             filepath: TAR/TGZ ファイルパス

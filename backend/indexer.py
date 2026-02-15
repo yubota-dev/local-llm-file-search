@@ -6,6 +6,13 @@ Chroma / FAISS に保存
 
 必須メタ：path, kind, mtime, size
 オプション：duration, resolution, artist, tags など
+
+【Phase 1 design constraints】
+- This module indexes METADATA and SIDECAR TEXT ONLY (no content analysis).
+- Metadata documents are created for search purposes (file name, format, resolution, etc.).
+- Vector embeddings represent structured metadata, NOT content understanding.
+- Content-based features (visual, audio, semantic) are deferred to Phase 2+.
+- Indexing structure is designed to support future content layers without modification.
 """
 
 import json
@@ -107,6 +114,11 @@ class MediaIndexer:
         """
         メタデータを検索用ドキュメント文章に変換
         
+        【Phase 1 constraint】
+        Documents are created from metadata ONLY (filename, resolution, duration, tags, etc.).
+        No content analysis or semantic interpretation is performed.
+        Document text is designed for search indexing, NOT for understanding file content.
+        
         Args:
             meta: メタデータ
         
@@ -188,19 +200,20 @@ class MediaIndexer:
     
     def _extract_metadata(self, meta: Dict) -> Dict:
         """
-        チロマDB用メタデータを抽出
+        チロマDB用メタデータを抽出（Phase 1: source_type を明示）
         
         Args:
             meta: 元メタデータ
         
         Returns:
-            チロマDB用メタデータ
+            チロマDB用メタデータ（各情報の出所を記録）
         """
         result = {
             'kind': str(meta.get('kind', 'unknown')),
             'path': str(meta.get('path', '')),
             'size': str(meta.get('size', 0)),
-            'mtime': str(meta.get('mtime', ''))
+            'mtime': str(meta.get('mtime', '')),
+            'source_type': 'metadata'  # Phase 1: データ出所を明示
         }
         
         # 動画
@@ -208,16 +221,43 @@ class MediaIndexer:
             vmeta = meta['video_meta']
             if 'video' in vmeta and vmeta['video'].get('width'):
                 result['resolution'] = f"{vmeta['video']['width']}x{vmeta['video']['height']}"
+            if 'duration_sec' in vmeta:
+                result['duration'] = str(vmeta['duration_sec'])
+            if 'tags' in vmeta and vmeta['tags']:
+                if vmeta['tags'].get('title'):
+                    result['title'] = str(vmeta['tags']['title'])
+                if vmeta['tags'].get('artist'):
+                    result['artist'] = str(vmeta['tags']['artist'])
         
         # 画像
         elif meta.get('kind') == 'image' and 'image_meta' in meta:
             imeta = meta['image_meta']
             if imeta.get('width'):
                 result['resolution'] = f"{imeta['width']}x{imeta['height']}"
+            if imeta.get('format'):
+                result['format'] = str(imeta['format'])
+        
+        # 音声
+        elif meta.get('kind') == 'audio' and 'audio_meta' in meta:
+            ameta = meta['audio_meta']
+            if 'duration_sec' in ameta:
+                result['duration'] = str(ameta['duration_sec'])
+            if 'tags' in ameta and ameta['tags']:
+                if ameta['tags'].get('title'):
+                    result['title'] = str(ameta['tags']['title'])
+                if ameta['tags'].get('artist'):
+                    result['artist'] = str(ameta['tags']['artist'])
         
         # アーカイブ
         elif meta.get('kind') == 'archive' and 'archive_meta' in meta:
-            result['entries'] = str(meta['archive_meta'].get('entry_count', 0))
+            ameta = meta['archive_meta']
+            result['entries'] = str(ameta.get('entry_count', 0))
+            result['format'] = str(ameta.get('format', 'unknown'))
+        
+        # 付随テキスト情報
+        if 'text_sources' in meta and meta['text_sources']:
+            text_types = [t.get('source_type', 'unknown') for t in meta['text_sources']]
+            result['has_text'] = ','.join(set(text_types))  # 重複排除
         
         return result
     

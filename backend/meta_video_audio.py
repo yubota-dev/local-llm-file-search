@@ -7,6 +7,12 @@ ffprobe を使用して以下を抽出：
 - tags (artist, title など)
 
 ffprobe が無い場合は graceful に失敗
+
+【Phase 1 design constraints】
+- This module extracts ONLY technical metadata (duration, resolution, codec, bitrate).
+- Media content analysis (speech, visual features, etc.) is NOT performed.
+- File content decoding for understanding purposes is not allowed.
+- Codec and format information are for indexing purposes only, not interpretation.
 """
 
 import subprocess

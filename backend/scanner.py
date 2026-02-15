@@ -5,6 +5,12 @@ scanner.py - メディア＆アーカイブ走査モジュール
 同名の付随ファイル（字幕・メモ・メタ）も自動紐づけ。
 
 主要メタ：path, name, ext, size, mtime（タイムスタンプ）
+
+【Phase 1 design constraints】
+- This module does NOT analyze media file contents.
+- Only file metadata (path, size, mtime), filenames, folder names are extracted.
+- Sidecar files (subtitles, notes, metadata) are indexed as file lists only.
+- Media content understanding is intentionally deferred to Phase 2+.
 """
 
 import os
