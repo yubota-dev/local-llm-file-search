@@ -90,7 +90,7 @@ class MediaScanner:
             name_without_ext = os.path.splitext(basename)[0]
             
             meta = {
-                'path': filepath,
+                'path': str(Path(filepath)),
                 'name': basename,
                 'name_without_ext': name_without_ext,
                 'ext': ext,
@@ -130,7 +130,7 @@ class MediaScanner:
                     try:
                         size = os.path.getsize(sidecar_path)
                         meta['sidecar_files'][sidecar_type + ext] = {
-                            'path': sidecar_path,
+                            'path': str(Path(sidecar_path)),
                             'size': size,
                             'type': sidecar_type
                         }

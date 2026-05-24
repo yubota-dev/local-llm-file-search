@@ -3,7 +3,7 @@
 # Scan settings
 scan:
   # Target drive/folder to scan (change this to your target location)
-  root_path: "D:\\"  # Example: change to your target drive
+  root_path: "F:/test_media"  # Example: change to your target drive
   
   # File extensions to index
   extensions:
@@ -43,7 +43,7 @@ vectordb:
 # LLM settings (Ollama)
 ollama:
   base_url: "http://localhost:11434"
-  model: "mistral"  # or "llama2", "neural-chat", etc.
+  model: "qwen2.5:14b" # or "llama2", "neural-chat", etc.
   temperature: 0.1  # Lower = less creative, more factual
   top_p: 0.9
 

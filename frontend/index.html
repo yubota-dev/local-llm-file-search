@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local Media Search</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+  .header { background: #16213e; padding: 1.5rem 2rem; border-bottom: 1px solid #0f3460; }
+  .header h1 { font-size: 1.4rem; font-weight: 500; color: #e94560; }
+  .header p { font-size: 0.85rem; color: #888; margin-top: 0.25rem; }
+  .search-area { padding: 2rem; max-width: 900px; margin: 0 auto; }
+  .search-box { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
+  .search-box input {
+    flex: 1; padding: 0.75rem 1rem; border-radius: 8px;
+    border: 1px solid #0f3460; background: #16213e;
+    color: #eee; font-size: 1rem; outline: none;
+  }
+  .search-box input:focus { border-color: #e94560; }
+  .search-box button {
+    padding: 0.75rem 1.5rem; border-radius: 8px;
+    background: #e94560; color: white; border: none;
+    cursor: pointer; font-size: 1rem; font-weight: 500;
+  }
+  .search-box button:hover { background: #c73652; }
+  .stats { font-size: 0.85rem; color: #888; margin-bottom: 1rem; }
+  .results { display: flex; flex-direction: column; gap: 0.75rem; }
+  .result-card {
+    background: #16213e; border: 1px solid #0f3460;
+    border-radius: 8px; padding: 1rem 1.25rem;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .result-card:hover { border-color: #e94560; }
+  .result-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+  .kind-badge {
+    font-size: 0.7rem; padding: 0.2rem 0.5rem;
+    border-radius: 4px; font-weight: 500; text-transform: uppercase;
+  }
+  .kind-video { background: #1a472a; color: #69db7c; }
+  .kind-audio { background: #1864ab; color: #74c0fc; }
+  .kind-image { background: #862e9c; color: #da77f2; }
+  .kind-archive { background: #5c3317; color: #ffa94d; }
+  .kind-text_sidecar { background: #495057; color: #ced4da; }
+  .result-name { font-size: 0.95rem; font-weight: 500; color: #eee; }
+  .result-path { font-size: 0.75rem; color: #666; margin-top: 0.25rem; word-break: break-all; }
+  .result-meta { display: flex; gap: 1rem; margin-top: 0.5rem; }
+  .result-meta span { font-size: 0.75rem; color: #888; }
+  .similarity { color: #e94560 !important; }
+  .loading { text-align: center; padding: 2rem; color: #888; }
+  .empty { text-align: center; padding: 3rem; color: #666; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🔍 Local Media Search</h1>
+  <p>ローカルファイルをAIで検索 — Files are the authoritative source</p>
+</div>
+<div class="search-area">
+  <div class="search-box">
+    <input type="text" id="query" placeholder="例: avi, flac, アニメ, 2024, png ..." autofocus>
+    <button onclick="search()">検索</button>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="results" id="results">
+    <div class="empty">検索ワードを入力してください</div>
+  </div>
+</div>
+
+<script>
+const queryInput = document.getElementById('query');
+const resultsDiv = document.getElementById('results');
+const statsDiv = document.getElementById('stats');
+
+queryInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') search();
+});
+
+async function search() {
+  const q = queryInput.value.trim();
+  if (!q) return;
+
+  resultsDiv.innerHTML = '<div class="loading">検索中...</div>';
+  statsDiv.textContent = '';
+
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&top_k=20`);
+    const data = await res.json();
+
+    statsDiv.textContent = `${data.count} 件見つかりました`;
+
+    if (data.results.length === 0) {
+      resultsDiv.innerHTML = '<div class="empty">該当するファイルが見つかりません</div>';
+      return;
+    }
+
+    resultsDiv.innerHTML = data.results.map((r, idx) => {
+      const meta = r.metadata || r;
+      const kind = meta.kind || 'unknown';
+      const path = meta.path || r.path || '';
+      const name = path.split(/[\\/]/).pop();
+      const size = meta.size ? formatSize(parseInt(meta.size)) : '';
+      const similarity = r.similarity ? `類似度: ${(1 - r.similarity).toFixed(3)}` : '';
+
+      return `
+        <div class="result-card" data-path="${encodeURIComponent(path)}" onclick="openFile(this)">
+          <div class="result-header">
+            <span class="kind-badge kind-${kind}">${kind}</span>
+            <span class="result-name">${name}</span>
+          </div>
+          <div class="result-path">${path}</div>
+          <div class="result-meta">
+            ${size ? `<span>${size}</span>` : ''}
+            ${similarity ? `<span class="similarity">${similarity}</span>` : ''}
+            ${meta.duration ? `<span>⏱ ${Math.round(meta.duration)}秒</span>` : ''}
+            ${meta.resolution ? `<span>📐 ${meta.resolution}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch (e) {
+    resultsDiv.innerHTML = `<div class="empty">エラー: ${e.message}</div>`;
+  }
+}
+
+async function openFile(el) {
+  try {
+    const path = decodeURIComponent(el.dataset.path);
+    const res = await fetch(`/api/open?path=${encodeURIComponent(path)}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(`ファイルを開けませんでした:\n${data.error}`);
+    }
+  } catch (e) {
+    alert(`エラー: ${e.message}`);
+  }
+}
+
+function formatSize(bytes) {
+  if (bytes > 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+  if (bytes > 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+  if (bytes > 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return bytes + ' B';
+}
+</script>
+</body>
+</html>
