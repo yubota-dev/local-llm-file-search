@@ -345,6 +345,12 @@ class MediaIndexer:
 if __name__ == '__main__':
     # テスト実行
     indexer = MediaIndexer()
+    metadata_list = indexer.load_metadata_from_file("data/raw/metadata.json")
+    if metadata_list:
+        indexer.index_metadata(metadata_list)
+        print(f"Indexing complete: {len(metadata_list)} items")
+    else:
+        print("No metadata found")
     
     # ダミーメタデータ
     sample_metadata = [
